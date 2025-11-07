@@ -1,44 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Lost & Found Admin</title>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f4f6fb;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      background: #ffffff;
+      width: 420px;
+      padding: 30px;
+      border-radius: 18px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+      animation: fadeIn 0.4s ease-in-out;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 25px;
+      font-size: 24px;
+      color: #333;
+    }
+
+    label {
+      font-weight: 600;
+      color: #555;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #dcdcdc;
+      font-size: 15px;
+      margin-top: 6px;
+      margin-bottom: 18px;
+      background: #fafafa;
+      transition: 0.2s;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: #4a90e2;
+      outline: none;
+      background: white;
+    }
+
+    textarea {
+      height: 90px;
+      resize: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.25s;
+    }
+
+    button:hover {
+      background: #3578c7;
+    }
+
+    #message {
+      text-align: center;
+      margin-top: 15px;
+      font-weight: 600;
+      color: #2e7d32;
+    }
+
+    /* Smooth fade animation */
+    @keyframes fadeIn {
+      from {opacity: 0; transform: translateY(10px);}
+      to {opacity: 1; transform: translateY(0);}
+    }
+  </style>
 </head>
 <body>
-  <h2>Lost and Found Admin Page</h2>
 
-  <form id="itemForm">
-    <label>Title:</label><br>
-    <input type="text" id="title" required><br><br>
+  <div class="container">
+    <h2>Lost & Found – Admin Upload</h2>
 
-    <label>Description:</label><br>
-    <textarea id="description" required></textarea><br><br>
+    <form id="itemForm">
+      <label>Title</label>
+      <input type="text" id="title" required>
 
-    <label>Status:</label><br>
-    <select id="status" required>
-      <option value="">-- choose --</option>
-      <option value="lost">Lost</option>
-      <option value="found">Found</option>
-    </select><br><br>
+      <label>Description</label>
+      <textarea id="description" required></textarea>
 
-    <label>Upload Image:</label><br>
-    <input type="file" id="image" accept="image/*" required><br><br>
+      <label>Status</label>
+      <select id="status" required>
+        <option value="">-- choose --</option>
+        <option value="lost">Lost</option>
+        <option value="found">Found</option>
+      </select>
 
-    <button type="submit">Upload Item</button>
-  </form>
+      <label>Upload Image</label>
+      <input type="file" id="image" accept="image/*" required>
 
-  <p id="message"></p>
+      <button type="submit">Upload Item</button>
+    </form>
 
+    <p id="message"></p>
+  </div>
+
+  <!-- ✅ Supabase Script -->
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-    // ✅ 1. Connect to Supabase
     const SUPABASE_URL = 'https://ohraiygpypssvzbinwwj.supabase.co'
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ocmFpeWdweXBzc3Z6Ymlud3dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI1MDcwNjEsImV4cCI6MjA3ODA4MzA2MX0.iqN9NIj8BxFnZAOWYj8wmr4KIRjad7GlMc-Kz9c294I'
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-    // ✅ 2. Handle form submit
     const form = document.getElementById('itemForm')
     const message = document.getElementById('message')
 
@@ -51,11 +139,9 @@
       const status = document.getElementById('status').value
       const file = document.getElementById('image').files[0]
 
-      if (!file) {
-        return alert('Please choose an image')
-      }
+      if (!file) return alert('Please select an image')
 
-      // ✅ 3. Upload image to storage bucket
+      // ✅ Upload file
       const fileName = `${Date.now()}_${file.name}`
       const { error: imageError } = await supabase
         .storage
@@ -64,11 +150,10 @@
 
       if (imageError) {
         console.error(imageError)
-        message.textContent = 'Image upload failed!'
+        message.textContent = '❌ Image upload failed'
         return
       }
 
-      // ✅ 4. Get the public image URL
       const { data: publicUrlData } = supabase
         .storage
         .from('lost-found-images')
@@ -76,7 +161,7 @@
 
       const imageUrl = publicUrlData.publicUrl
 
-      // ✅ 5. Save to database with correct columns
+      // ✅ Save into table
       const { error } = await supabase
         .from('lostandfounds')
         .insert([
@@ -84,14 +169,14 @@
             title,
             description,
             status,
-            image_url: imageUrl,   // ✅ correct column
-            date_reported: new Date().toISOString() // ✅ important
+            image_url: imageUrl,
+            date_reported: new Date().toISOString()
           }
         ])
 
       if (error) {
         console.error(error)
-        message.textContent = 'Error saving to database!'
+        message.textContent = '❌ Error saving to database'
         return
       }
 
@@ -99,5 +184,6 @@
       form.reset()
     })
   </script>
+
 </body>
 </html>
