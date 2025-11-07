@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lost & Found Admin</title>
+</head>
+<body>
+  <h2>Lost and Found Admin Page</h2>
+
+  <form id="itemForm">
+    <label>Title:</label><br>
+    <input type="text" id="title" required><br><br>
+
+    <label>Description:</label><br>
+    <textarea id="description" required></textarea><br><br>
+
+    <label>Status:</label><br>
+    <select id="status" required>
+      <option value="">-- choose --</option>
+      <option value="lost">Lost</option>
+      <option value="found">Found</option>
+    </select><br><br>
+
+    <label>Upload Image:</label><br>
+    <input type="file" id="image" accept="image/*" required><br><br>
+
+    <button type="submit">Upload Item</button>
+  </form>
+
+  <p id="message"></p>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+    // 1️⃣ Connect to Supabase
+    const SUPABASE_URL = 'https://ohraiygpypssvzbinwwj.supabase.co'
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ocmFpeWdweXBzc3Z6Ymlud3dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI1MDcwNjEsImV4cCI6MjA3ODA4MzA2MX0.iqN9NIj8BxFnZAOWYj8wmr4KIRjad7GlMc-Kz9c294I'
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+    // 2️⃣ Handle form submit
+    const form = document.getElementById('itemForm')
+    const message = document.getElementById('message')
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault()
+      message.textContent = 'Uploading...'
+
+      const title = document.getElementById('title').value
+      const description = document.getElementById('description').value
+      const status = document.getElementById('status').value
+      const file = document.getElementById('image').files[0]
+
+      if (!file) {
+        return alert('Please choose an image')
+      }
+
+      // 3️⃣ Upload image to storage bucket
+      const fileName = `${Date.now()}_${file.name}`
+      const { data: imageData, error: imageError } = await supabase
+        .storage
+        .from('lost-found-images') // your bucket name
+        .upload(fileName, file)
+
+      if (imageError) {
+        console.error(imageError)
+        message.textContent = 'Image upload failed!'
+        return
+      }
+
+      // 4️⃣ Get the public image URL
+      const { data: publicUrlData } = supabase
+        .storage
+        .from('lost-found-images')
+        .getPublicUrl(fileName)
+
+      const imageUrl = publicUrlData.publicUrl
+
+      // 5️⃣ Insert data into the table
+      const { data, error } = await supabase
+        .from('lostandfounds')
+        .insert([
+          {
+            title,
+            description,
+            status,
+            image_path: imageUrl
+          }
+        ])
+
+      if (error) {
+        console.error(error)
+        message.textContent = 'Error saving to database!'
+        return
+      }
+
+      message.textContent = '✅ Item uploaded successfully!'
+      form.reset()
+    })
+  </script>
+</body>
+</html>
