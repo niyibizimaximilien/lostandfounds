@@ -32,12 +32,13 @@
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-    // 1️⃣ Connect to Supabase
+    // ✅ 1. Connect to Supabase
     const SUPABASE_URL = 'https://ohraiygpypssvzbinwwj.supabase.co'
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ocmFpeWdweXBzc3Z6Ymlud3dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI1MDcwNjEsImV4cCI6MjA3ODA4MzA2MX0.iqN9NIj8BxFnZAOWYj8wmr4KIRjad7GlMc-Kz9c294I'
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-    // 2️⃣ Handle form submit
+    // ✅ 2. Handle form submit
     const form = document.getElementById('itemForm')
     const message = document.getElementById('message')
 
@@ -54,11 +55,11 @@
         return alert('Please choose an image')
       }
 
-      // 3️⃣ Upload image to storage bucket
+      // ✅ 3. Upload image to storage bucket
       const fileName = `${Date.now()}_${file.name}`
-      const { data: imageData, error: imageError } = await supabase
+      const { error: imageError } = await supabase
         .storage
-        .from('lost-found-images') // your bucket name
+        .from('lost-found-images')
         .upload(fileName, file)
 
       if (imageError) {
@@ -67,7 +68,7 @@
         return
       }
 
-      // 4️⃣ Get the public image URL
+      // ✅ 4. Get the public image URL
       const { data: publicUrlData } = supabase
         .storage
         .from('lost-found-images')
@@ -75,15 +76,16 @@
 
       const imageUrl = publicUrlData.publicUrl
 
-      // 5️⃣ Insert data into the table
-      const { data, error } = await supabase
+      // ✅ 5. Save to database with correct columns
+      const { error } = await supabase
         .from('lostandfounds')
         .insert([
           {
             title,
             description,
             status,
-            image_path: imageUrl
+            image_url: imageUrl,   // ✅ correct column
+            date_reported: new Date().toISOString() // ✅ important
           }
         ])
 
